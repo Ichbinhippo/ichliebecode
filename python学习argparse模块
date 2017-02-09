@@ -1,0 +1,263 @@
+1.设置一个解析器
+
+
+解析器类是 ArgumentParser
+
+
+定义格式如下：
+
+import argparse
+parser = argparse.ArgumentParser(description='This is a PyMOTW sample program')
+
+
+description：描述程序
+
+
+2.解析一个命令行
+
+定义了所有参数之后，就可以给 parse_args() 传递一组参数字符串来解析命令行。
+
+默认情况下，参数是从 sys.argv[1:] 中获取，但也可以传递自己的参数列表。
+
+parse_args() 的返回值是一个命名空间，包含传递给命令的参数。该对象将参数保存其属性，因此如果你的参数dest 是 "myoption"，那么你就可以args.myoption 来访问该值。
+
+
+定义格式如下：
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+
+
+3. add_argument: 用来指定程序需要接受的命令参数，该调用有多个参数
+
+ArgumentParser.add_argument
+
+(
+
+name or flags…[, action]  [, nargs]  [, const]  [, default]  [, type]  [, choices]  [, required]  [, help]  [, metavar]  [, dest]
+
+)
+
+name or flags:是必须的参数，该参数接受选项参数或者是位置参数（一串文件名）。在执行程序的时候，定位参数必选，可选参数可选。
+
+定位参数：
+
+parser.add_argument("echo",help="echo the string")
+
+可选参数：
+
+parser.add_argument("--verbosity", help="increase output verbosity")
+
+
+常用可选参数：
+
+     action：参数出发的动作
+
+     nargs: 当选项后接受多个或者0个参数时需要这个来指定，比如-u选项接受2个参数。
+
+      当选项接受1个或者不需要参数时指定nargs=’?'
+
+     当没有参数时，会从default中取值。对于选项参数有一个额外的情况，即出现选项而后面没有跟具体参数，则会从const中取值
+
+      dest：如果提供dest，例如dest="a"，那么可以通过args.a访问该参数
+
+default：设置参数的默认值
+
+store：保存参数，默认
+
+store_const：保存一个被定义为参数规格一部分的值（常量），而不是一个来自参数解析而来的值。
+
+store_ture/store_false：保存相应的布尔值
+
+append：将值保存在一个列表中。
+
+append_const：将一个定义在参数规格中的值（常量）保存在一个列表中。
+
+count：参数出现的次数
+
+version：打印程序版本信息
+
+type：把从命令行输入的结果转成设置的类型
+
+choice：允许的参数值
+
+help：参数命令的介绍
+
+
+parser.add_argument("-v", "--verbosity", action="count", default=0, help="increase output verbosity")
+
+parser.add_argument("-v", "--verbosity", type=int, choices=[0, 1, 2], help="increase output verbosity")
+
+ 
+
+eg:  
+
+    >>> parser.add_argument('-u',nargs=2)  
+    >>> parser.parse_args('-u a b'.split())  
+    Namespace(u=['a', 'b'])
+
+    >>> parser.add_argument('-u',nargs='?')  
+    >>> parser.parse_args(' '.split())  
+    Namespace(u=None)  
+
+    >>> parser.parse_args('-u a'.split( ))  
+    Namespace(u='a')
+
+
+
+    >>> parser.add_argument('-u',nargs='?',default='d',const='s')  
+    >>> parser.add_argument('A',nargs='?',default='T',const='P')  
+    >>> parser.parse_args(''.split())  
+    Namespace(A='T', u='d')  
+
+    >>> parser.parse_args('-u'.split())  
+    Namespace(A='T', u='s')  
+
+    >>> parser.parse_args('A'.split())  
+    Namespace(A='A', u='d') 
+
+
+对于后面需要跟多个参数的情况（–foo a1 a2 a3…),则需要设置nargs=’*’
+
+    >>> parser.add_argument('-u',nargs='*')  
+    >>> parser.parse_args('-u a b c d e'.split())  
+    Namespace(u=['a', 'b', 'c', 'd', 'e'])
+
+
+nargs=’+'和nargs=’*'一样，但当使用nargs=’+'时，少于1个参数（没有参数），则位置参数会报错误。
+
+而nargs=‘*’会使用默认值
+
+
+    >>> parser.add_argument('u',nargs='+')  
+    >>> parser.parse_args(''.split())  
+    usage: [-h] u [u ...]  
+    : error: too few arguments  
+
+
+    >>> parser.add_argument('u',nargs='*',default='e')  
+    >>> parser.parse_args(''.split())  
+    Namespace(u='e')
+
+default: 当参数需要默认值时，由这个参数指定，默认为None,当default=argparse.SUPPRESS时，不使用任何值
+
+    >>> parser.add_argument('u',nargs='*',default=argparse.SUPPRESS)  
+    >>> parser.parse_args(''.split())  
+    Namespace( )  
+
+
+type: 使用这个参数，转换输入参数的具体类型,这个参数可以关联到某个自定义的处理函数，这种函数通常用来检查值的范围，以及合法性
+
+    >>> parser.parse_args('-u',type=int)  
+    >>> parser.add_argument('f',type=file)  
+    >>> parser.parse_args('-u 2 aa'.split())  
+    Namespace(f='aa', mode 'r' at 0x8b4ee38>, u=2)  
+
+
+choices: 这个参数用来检查输入参数的范围
+
+    >>> parser.add_argument('-u',type=int,choices=[1,3,5])  
+    >>> parser.parse_args('-u 3'.split())  
+    Namespace(u=3)  
+    >>> parser.parse_args('-u 4'.split())  
+    usage: [-h] [-u {1,3,5}]  
+    : error: argument -u: invalid choice: 4 (choose from 1, 3, 5)
+
+required: 当某个选项指定需要在命令中出现的时候用这个参数
+
+    >>> parser.add_argument('-u',required=True)  
+    >>> parser.parse_args(' '.split())  
+    usage: [-h] -u U  
+    : error: argument -u is required
+
+help: 使用这个参数描述选项作用
+
+    >>> parser.add_argument('u',required=True,default='wowo',
+                                                  help='(prog)s for test sth(default: %(default)s)')  
+    >>> parser.print_help()                                                       
+    usage: [-h] -u U  
+    optional arguments:  
+      -h, --help  show this help message and exit  
+      -u U        for test sth(default: wowo)
+     
+
+
+dest: 这个参数相当于把位置或者选项关联到一个特定的名字
+
+    >>> parser.add_argument('--str',nargs='*')  
+    >>> parser.parse_args('--str a b c'.split())  
+    Namespace(str=['a', 'b', 'c'])  
+      
+    >>> parser.add_argument('--str',nargs='*',dest='myname')  
+    >>> parser.parse_args('--str a b c'.split())  
+    Namespace(myname=['a', 'b', 'c']) 
+
+
+metavar: 这个参数用于help 信息输出
+
+    >>> parser.add_argument('--str',nargs='*',metavar='AAA')  
+    >>> parser.print_help()  
+    usage: [-h] [--str [AAA [AAA ...]]]  
+      
+    optional arguments:  
+      -h, --help            show this help message and exit  
+      --str [AAA [AAA ...]]
+
+
+neural style源码中argparse的应用
+
+def build_parser():
+    parser = ArgumentParser()
+    parser.add_argument('--content',
+            dest='content', help='content image',
+            metavar='CONTENT', required=True)
+    parser.add_argument('--styles',
+            dest='styles',
+            nargs='+', help='one or more style images',
+            metavar='STYLE', required=True)
+    parser.add_argument('--output',
+            dest='output', help='output path',
+            metavar='OUTPUT', required=True)
+    parser.add_argument('--iterations', type=int,
+            dest='iterations', help='iterations (default %(default)s)',
+            metavar='ITERATIONS', default=ITERATIONS)
+    parser.add_argument('--print-iterations', type=int,
+            dest='print_iterations', help='statistics printing frequency',
+            metavar='PRINT_ITERATIONS')
+    parser.add_argument('--checkpoint-output',
+            dest='checkpoint_output', help='checkpoint output format, e.g. output%%s.jpg',
+            metavar='OUTPUT')
+    parser.add_argument('--checkpoint-iterations', type=int,
+            dest='checkpoint_iterations', help='checkpoint frequency',
+            metavar='CHECKPOINT_ITERATIONS')
+    parser.add_argument('--width', type=int,
+            dest='width', help='output width',
+            metavar='WIDTH')
+    parser.add_argument('--style-scales', type=float,
+            dest='style_scales',
+            nargs='+', help='one or more style scales',
+            metavar='STYLE_SCALE')
+    parser.add_argument('--network',
+            dest='network', help='path to network parameters (default %(default)s)',
+            metavar='VGG_PATH', default=VGG_PATH)
+    parser.add_argument('--content-weight', type=float,
+            dest='content_weight', help='content weight (default %(default)s)',
+            metavar='CONTENT_WEIGHT', default=CONTENT_WEIGHT)
+    parser.add_argument('--style-weight', type=float,
+            dest='style_weight', help='style weight (default %(default)s)',
+            metavar='STYLE_WEIGHT', default=STYLE_WEIGHT)
+    parser.add_argument('--style-blend-weights', type=float,
+            dest='style_blend_weights', help='style blending weights',
+            nargs='+', metavar='STYLE_BLEND_WEIGHT')
+    parser.add_argument('--tv-weight', type=float,
+            dest='tv_weight', help='total variation regularization weight (default %(default)s)',
+            metavar='TV_WEIGHT', default=TV_WEIGHT)
+    parser.add_argument('--learning-rate', type=float,
+            dest='learning_rate', help='learning rate (default %(default)s)',
+            metavar='LEARNING_RATE', default=LEARNING_RATE)
+    parser.add_argument('--initial',
+            dest='initial', help='initial image',
+            metavar='INITIAL')
+   
+
+return parser
+
